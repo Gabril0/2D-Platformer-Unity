@@ -5,27 +5,49 @@ using UnityEngine;
 [RequireComponent(typeof(Rigidbody2D), typeof(Collider2D))]
 public class CharacterController : MonoBehaviour
 {
-    [SerializeField] private float gravity = 9.8f;
+    [Header("Walking")]
     [SerializeField] private float deceleration = 1.5f;
     [SerializeField] private float speed = 1.5f;
-    [SerializeField] private float jumpForce = 1.5f;
     [SerializeField] private float maxSpeed = 15f;
+    private float horizontalInput;
+
+    [Header("Collision")]
+    [SerializeField] private bool isGrounded = false;
     [SerializeField] private LayerMask playerLayer;
 
-    private Vector2 tempVelocity;
+
+    [Header("Jump")]
+    [SerializeField] private float jumpDeceleration = 15;
+    [SerializeField] private float gravity = 9.8f;
+    [SerializeField] private float jumpForce = 1.5f;
+    private bool pressedJump = false;
+    private bool isJumping = false;
 
     private Rigidbody2D rb;
     private CapsuleCollider2D col;
+    private Vector2 tempVelocity;
 
     void Start()
     {
         rb = GetComponent<Rigidbody2D>();
         col = GetComponent<CapsuleCollider2D>();
     }
+    private void Update()
+    {
+        inputManager();
+    }
+
+    private void inputManager()
+    {
+        if (Input.GetKeyDown(KeyCode.Space)){
+            pressedJump = true;
+        }
+        horizontalInput = Input.GetAxisRaw("Horizontal");
+    }
 
     void FixedUpdate()
     {
-        move();
+        Move();
         ApplyGravity();
         Jump();
         CheckCollision();
@@ -33,37 +55,53 @@ public class CharacterController : MonoBehaviour
         //Coyote
         //Jump Buffer
         //Jump Height
-        //Trail
         //Apex Modifiers
         //Edge detection
         //Wall stop
+        //Fall when hitting the head
 
         rb.velocity = tempVelocity;
     }
-
     private void ApplyGravity()
     {
-        Vector2 newVelocity = tempVelocity + Vector2.down * gravity;
-        tempVelocity = new Vector2(tempVelocity.x, newVelocity.y); // To not change X velocity
-    }
 
-    private void Jump() {
-        if (Input.GetKeyDown(KeyCode.Space)) {
-            Vector2 newVelocity = tempVelocity + Vector2.up * jumpForce;
-            tempVelocity = new Vector2(tempVelocity.x, newVelocity.y);
+        if (!isGrounded && tempVelocity.y <=0){
+            tempVelocity.y -= gravity;
+            Debug.Log(Time.deltaTime);
+        }
+        if (!isGrounded && tempVelocity.y > 0)
+        {
+            tempVelocity.y -= jumpForce / jumpDeceleration;
+            Debug.Log(Time.time);
+            
+
+        }
+        if (isGrounded && !isJumping){
+            if(tempVelocity.y < 0) tempVelocity.y = 0;
         }
     }
 
-    private void move()
-    {
-        float horizontalInput = Input.GetAxisRaw("Horizontal");
-        //Debug.Log(tempVelocity);
 
+    private void Jump() {
+        if (pressedJump && isGrounded) {
+            tempVelocity.y = jumpForce;
+            pressedJump = false;
+            isJumping = true;
+        }
+    }
+
+    private void Move()
+    {
+        //Debug.Log(tempVelocity);
          if (Mathf.Abs(horizontalInput) > 0)
         {
             if (Mathf.Abs(tempVelocity.x) <= maxSpeed)
             {
                 tempVelocity += horizontalInput * Vector2.right * speed;
+            }
+            if (Mathf.Sign(horizontalInput) != Mathf.Sign(tempVelocity.x))
+            {
+                tempVelocity += horizontalInput * Vector2.right * deceleration/4;
             }
         }
         else
@@ -85,8 +123,13 @@ public class CharacterController : MonoBehaviour
     private void CheckCollision()
     {
         bool hitGround = Physics2D.CapsuleCast(col.bounds.center, col.size, col.direction, 0, Vector2.down,0.05f,~playerLayer);
-        if (hitGround) {
-            tempVelocity.y = 0;
+        if (hitGround)
+        {
+            isGrounded = true;
+            isJumping = false;
+        }
+        else {
+            isGrounded= false;
         }
     }
 
