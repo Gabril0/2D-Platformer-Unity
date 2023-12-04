@@ -47,6 +47,12 @@ public class CharacterController : MonoBehaviour
     private float coyoteTime = 0.1f;
     private bool coyoteActive = false;
 
+    //Run
+    private bool pressedRun = false;
+    private float maxSpeedRun = 25;
+
+
+    //Collision and Physics
     private Rigidbody2D rb;
     private CapsuleCollider2D col;
     private Vector2 tempVelocity;
@@ -58,11 +64,12 @@ public class CharacterController : MonoBehaviour
     }
     private void Update()
     {
-        inputManager();
+        InputManager();
     }
 
-    private void inputManager()
+    private void InputManager()
     {
+        // Jump
         if (Input.GetKeyDown(KeyCode.Space)){
             pressedJump = isGrounded ? true : false;
             if (!isGrounded) { pressedJump = (Time.time - lastTimeTouchedGround < coyoteTime) ? true : false; 
@@ -79,19 +86,22 @@ public class CharacterController : MonoBehaviour
             variableJumpHeight = variableJumpHeight > minimumJumpHeight ? variableJumpHeight : minimumJumpHeight;
             releasedJumpButton = true;
         }
-        horizontalInput = Input.GetAxisRaw("Horizontal");
+        // Running
+        pressedRun = Input.GetKey(KeyCode.LeftShift)? true : false;
+
+            horizontalInput = Input.GetAxisRaw("Horizontal");
     }
 
     void FixedUpdate()
     {
+        Debug.Log(tempVelocity.x);
         CheckCollision();
         Move();
         ApplyGravity();
         Jump();
         //TODO
-        //Fix the head jump problem
-        //Wall stop
-        //Run
+        //Find a way to transfer speed between sides
+        //GroundPount(don't loose speed)
 
         
 
@@ -135,8 +145,8 @@ public class CharacterController : MonoBehaviour
     private void Move()
     {
          if (Mathf.Abs(horizontalInput) > 0)
-        {
-            if (Mathf.Abs(tempVelocity.x) <= maxSpeed)
+        {   // About Walking
+            if (Mathf.Abs(tempVelocity.x) <= maxSpeed && !pressedRun)
             {
                 tempVelocity += horizontalInput * Vector2.right * speed;
             }
@@ -144,8 +154,13 @@ public class CharacterController : MonoBehaviour
             {
                 tempVelocity += horizontalInput * Vector2.right * deceleration/4;
             }
-            if ((Mathf.Abs(tempVelocity.x) <= maxSpeed) && isJumping) {
+            if ((Mathf.Abs(tempVelocity.x) <= maxSpeed) && isJumping && !pressedRun) {
                 tempVelocity += horizontalInput * Vector2.right * deceleration / 4 * airAcceleration;
+            }
+            // End Walking
+            if (pressedRun) { // About running
+                if (Mathf.Abs(tempVelocity.x) <= maxSpeedRun) tempVelocity += horizontalInput * Vector2.right * speed;
+                if ((Mathf.Abs(tempVelocity.x) <= maxSpeedRun) && isJumping) tempVelocity += horizontalInput * Vector2.right * deceleration / 4 * airAcceleration;
             }
         }
         else
@@ -176,8 +191,7 @@ public class CharacterController : MonoBehaviour
         bool hitCeiling = Physics2D.Raycast(topCenter, directionUp, 0.05f, ~playerLayer);
         bool hitGround = Physics2D.CapsuleCast(col.bounds.center, col.bounds.size - new Vector3(0.1f, 0f, 0f), col.direction, 0, Vector2.down, 0.05f, ~playerLayer);
         //bool hitCeiling= Physics2D.CapsuleCast(col.bounds.center, col.size, col.direction, 0, Vector2.up, 0.05f, ~playerLayer);
-
-        if (hitGround)
+        if (hitGround && tempVelocity.y <=0)
         {
             isGrounded = true;
             isJumping = false;
@@ -189,7 +203,7 @@ public class CharacterController : MonoBehaviour
         }
         if (!isGrounded && hitCeiling)
         {
-            tempVelocity.y = 0;
+            //tempVelocity.y = 0;
         }
     }
 
