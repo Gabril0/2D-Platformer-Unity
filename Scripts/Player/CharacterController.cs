@@ -1,5 +1,7 @@
 using System.Collections;
 using System.Collections.Generic;
+using Unity.VisualScripting;
+using UnityEditor.Experimental.GraphView;
 using UnityEngine;
 
 [RequireComponent(typeof(Rigidbody2D), typeof(Collider2D))]
@@ -33,13 +35,17 @@ public class CharacterController : MonoBehaviour
     [SerializeField] float minimumJumpHeight = 0.5f;
 
     //Jump Buffer
-    private float timeTouchedGround = 0;
+    private float lastTimeTouchedGround = 0;
     [SerializeField] private float jumpBuffer = 0.2f;
     private float startedJumpBuffer;
     private bool isJumpBuffered = false;
 
     //Terminal Velocity
     [SerializeField] private float terminalVelocity = 15;
+
+    //Coyote
+    private float coyoteTime = 0.1f;
+    private bool coyoteActive = false;
 
     private Rigidbody2D rb;
     private CapsuleCollider2D col;
@@ -58,7 +64,11 @@ public class CharacterController : MonoBehaviour
     private void inputManager()
     {
         if (Input.GetKeyDown(KeyCode.Space)){
-            pressedJump = isGrounded? true : false;
+            pressedJump = isGrounded ? true : false;
+            if (!isGrounded) { pressedJump = (Time.time - lastTimeTouchedGround < coyoteTime) ? true : false; 
+                coyoteActive = pressedJump? true:false; 
+            }
+
             timeStartedHoldingJump = Time.time;
             startedJumpBuffer = Time.time;
             releasedJumpButton = false;
@@ -79,10 +89,10 @@ public class CharacterController : MonoBehaviour
         ApplyGravity();
         Jump();
         //TODO
-        //Coyote
-        //Apex Modifiers
-        //Edge detection
+        //Fix the head jump problem
         //Wall stop
+        //Run
+
         
 
         rb.velocity = tempVelocity;
@@ -104,16 +114,17 @@ public class CharacterController : MonoBehaviour
 
 
     private void Jump() {
-        if ((timeTouchedGround - startedJumpBuffer < jumpBuffer) && !isGrounded)
+        if ((lastTimeTouchedGround - startedJumpBuffer < jumpBuffer) && !isGrounded)
         {
             isJumpBuffered = true;
         }
-        else if ((timeTouchedGround - startedJumpBuffer > jumpBuffer)) isJumpBuffered = false;
-        if ((pressedJump || isJumpBuffered) && isGrounded) {
+        else if ((lastTimeTouchedGround - startedJumpBuffer > jumpBuffer)) isJumpBuffered = false;
+        if (((pressedJump || isJumpBuffered) && isGrounded) || coyoteActive) {
             tempVelocity.y = jumpForce;
             pressedJump = false;
             isJumping = true;
             startedJumpBuffer = 0;
+            coyoteActive = false;
         }
         if (isJumping) {
             tempVelocity.y -= releasedJumpButton ? jumpForce / jumpDeceleration * 1 - variableJumpHeight : 0;
@@ -154,22 +165,23 @@ public class CharacterController : MonoBehaviour
 
     private void CheckCollision()
     {
-        Vector2 bottomCenter = new Vector2(col.bounds.center.x, col.bounds.min.y);
-        Vector2 directionDown = Vector2.down;
+        //Vector2 bottomCenter = new Vector2(col.bounds.center.x, col.bounds.min.y);
+        //Vector2 directionDown = Vector2.down;
 
-        bool hitGround = Physics2D.Raycast(bottomCenter, directionDown, 0.05f, ~playerLayer);
+        //bool hitGround = Physics2D.Raycast(bottomCenter, directionDown, 0.05f, ~playerLayer);
 
         Vector2 topCenter = new Vector2(col.bounds.center.x, col.bounds.max.y);
         Vector2 directionUp = Vector2.up;
 
         bool hitCeiling = Physics2D.Raycast(topCenter, directionUp, 0.05f, ~playerLayer);
-
+        bool hitGround = Physics2D.CapsuleCast(col.bounds.center, col.bounds.size - new Vector3(0.1f, 0f, 0f), col.direction, 0, Vector2.down, 0.05f, ~playerLayer);
+        //bool hitCeiling= Physics2D.CapsuleCast(col.bounds.center, col.size, col.direction, 0, Vector2.up, 0.05f, ~playerLayer);
 
         if (hitGround)
         {
             isGrounded = true;
             isJumping = false;
-            timeTouchedGround = Time.time;
+            lastTimeTouchedGround = Time.time;
         }
         else
         {
@@ -177,8 +189,7 @@ public class CharacterController : MonoBehaviour
         }
         if (!isGrounded && hitCeiling)
         {
-            float vectorUp = tempVelocity.y;
-            tempVelocity.y = -vectorUp / 2;
+            tempVelocity.y = 0;
         }
     }
 

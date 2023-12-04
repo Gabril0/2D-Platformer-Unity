@@ -1030,7 +1030,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   deceleration: 4
-  speed: 0.5
+  speed: 0.3
   maxSpeed: 15
   isGrounded: 0
   playerLayer:
@@ -1041,7 +1041,7 @@ MonoBehaviour:
   gravity: 2
   jumpForce: 30
   maxJumpTime: 0.8
-  minimumJumpHeight: 0.5
+  minimumJumpHeight: 0.4
   jumpBuffer: 0.2
   terminalVelocity: 15
 --- !u!70 &1840062611
