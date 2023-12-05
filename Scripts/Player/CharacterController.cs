@@ -2,6 +2,7 @@ using System.Collections;
 using System.Collections.Generic;
 using Unity.VisualScripting;
 using UnityEditor.Experimental.GraphView;
+using UnityEditor.Search;
 using UnityEngine;
 
 [RequireComponent(typeof(Rigidbody2D), typeof(Collider2D))]
@@ -44,12 +45,24 @@ public class CharacterController : MonoBehaviour
     [SerializeField] private float terminalVelocity = 15;
 
     //Coyote
-    private float coyoteTime = 0.1f;
+    [SerializeField] float coyoteTime = 0.1f;
     private bool coyoteActive = false;
 
     //Run
     private bool pressedRun = false;
-    private float maxSpeedRun = 25;
+    [SerializeField] float maxSpeedRun = 25;
+
+    //GroundPound
+    private bool pressedGroundPound = false;
+    [SerializeField] float groundPoundForce = 30;
+    private bool isGroundPounding = false;
+    private float speedXBeforeGP = 0;
+
+    //SideSwitch
+    private float lastFrameVelocityX = 0;
+    [SerializeField] float sideSwitchTimer = 0.2f;
+    private float switchStartTimer = 0;
+    private bool canSideSwitch;
 
 
     //Collision and Physics
@@ -89,19 +102,27 @@ public class CharacterController : MonoBehaviour
         // Running
         pressedRun = Input.GetKey(KeyCode.LeftShift)? true : false;
 
-            horizontalInput = Input.GetAxisRaw("Horizontal");
+        // GroundPound
+        if(Input.GetKeyDown(KeyCode.LeftControl)) pressedGroundPound = true;
+
+        horizontalInput = Input.GetAxisRaw("Horizontal");
+
     }
 
     void FixedUpdate()
     {
-        Debug.Log(tempVelocity.x);
+        Debug.Log(tempVelocity);
         CheckCollision();
         Move();
         ApplyGravity();
         Jump();
+        GroundPound();
+        SideSwitch();
         //TODO
+        //FinishSideSwitch
+        //Crawl
         //Find a way to transfer speed between sides
-        //GroundPount(don't loose speed)
+
 
         
 
@@ -142,10 +163,36 @@ public class CharacterController : MonoBehaviour
         
     }
 
+    private void GroundPound(){// For the move where the player change directions while keeping the speed
+        if (isGroundPounding) {
+            tempVelocity = new Vector2(0, -groundPoundForce);
+            if (isGrounded){
+                isGroundPounding = false;
+                tempVelocity.x = speedXBeforeGP;
+            }
+        }
+        if (pressedGroundPound && !isGrounded)
+        {
+            isGroundPounding = true;
+            pressedGroundPound = false;
+            speedXBeforeGP = tempVelocity.x;
+        }
+        else {
+            pressedGroundPound = false;
+        }
+    }
+
+    private void SideSwitch() {
+        //Compare the transform change with the speed, and then apply a buffer to send flying in the oposite direction while maintaining the last speed
+    }
+
     private void Move()
     {
          if (Mathf.Abs(horizontalInput) > 0)
         {   // About Walking
+            if (!pressedRun && tempVelocity.x > maxSpeed) {
+                tempVelocity.x = maxSpeed;
+            }
             if (Mathf.Abs(tempVelocity.x) <= maxSpeed && !pressedRun)
             {
                 tempVelocity += horizontalInput * Vector2.right * speed;
@@ -185,10 +232,10 @@ public class CharacterController : MonoBehaviour
 
         //bool hitGround = Physics2D.Raycast(bottomCenter, directionDown, 0.05f, ~playerLayer);
 
-        Vector2 topCenter = new Vector2(col.bounds.center.x, col.bounds.max.y);
-        Vector2 directionUp = Vector2.up;
+        //Vector2 topCenter = new Vector2(col.bounds.center.x, col.bounds.max.y);
+        //Vector2 directionUp = Vector2.up;
 
-        bool hitCeiling = Physics2D.Raycast(topCenter, directionUp, 0.05f, ~playerLayer);
+        //bool hitCeiling = Physics2D.Raycast(topCenter, directionUp, 0.05f, ~playerLayer);
         bool hitGround = Physics2D.CapsuleCast(col.bounds.center, col.bounds.size - new Vector3(0.1f, 0f, 0f), col.direction, 0, Vector2.down, 0.05f, ~playerLayer);
         //bool hitCeiling= Physics2D.CapsuleCast(col.bounds.center, col.size, col.direction, 0, Vector2.up, 0.05f, ~playerLayer);
         if (hitGround && tempVelocity.y <=0)
@@ -201,10 +248,10 @@ public class CharacterController : MonoBehaviour
         {
             isGrounded = false;
         }
-        if (!isGrounded && hitCeiling)
-        {
-            //tempVelocity.y = 0;
-        }
+        //if (!isGrounded && hitCeiling)
+        //{
+        //    //tempVelocity.y = 0;
+        //}
     }
 
 }
