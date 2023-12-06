@@ -13,6 +13,7 @@ public class CharacterController : MonoBehaviour
     [SerializeField] private float speed = 1.5f;
     [SerializeField] private float maxSpeed = 15f;
     private float horizontalInput;
+    private float verticalInput;
 
     [Header("Collision")]
     [SerializeField] private bool isGrounded = false;
@@ -28,6 +29,8 @@ public class CharacterController : MonoBehaviour
     private bool isJumping = false;
     private float timeStartedHoldingJump;
     private float timeHoldingJump;
+    private float speedBeforeJump;
+
 
     //Variable Jump Height
     [SerializeField] private float maxJumpTime = 0.8f;
@@ -48,21 +51,19 @@ public class CharacterController : MonoBehaviour
     [SerializeField] float coyoteTime = 0.1f;
     private bool coyoteActive = false;
 
-    //Run
-    private bool pressedRun = false;
+    [Header("Run")]
     [SerializeField] float maxSpeedRun = 25;
+    private bool pressedRun = false;
 
-    //GroundPound
-    private bool pressedGroundPound = false;
+    [Header("GroundPound")]
     [SerializeField] float groundPoundForce = 30;
+    private bool pressedGroundPound = false;
     private bool isGroundPounding = false;
     private float speedXBeforeGP = 0;
 
-    //SideSwitch
-    private float lastFrameVelocityX = 0;
-    [SerializeField] float sideSwitchTimer = 0.2f;
-    private float switchStartTimer = 0;
-    private bool canSideSwitch;
+    //Crouch
+    private bool isCrouching = false;
+    private bool isHittingHead = false;
 
 
     //Collision and Physics
@@ -100,31 +101,24 @@ public class CharacterController : MonoBehaviour
             releasedJumpButton = true;
         }
         // Running
-        pressedRun = Input.GetKey(KeyCode.LeftShift)? true : false;
+        pressedRun = Input.GetKey(KeyCode.X)? true : false;
 
         // GroundPound
-        if(Input.GetKeyDown(KeyCode.LeftControl)) pressedGroundPound = true;
+        if(Input.GetKeyDown(KeyCode.Z)) pressedGroundPound = true;
 
         horizontalInput = Input.GetAxisRaw("Horizontal");
+        verticalInput = Input.GetAxisRaw("Vertical");
 
     }
 
     void FixedUpdate()
     {
-        Debug.Log(tempVelocity);
         CheckCollision();
         Move();
         ApplyGravity();
         Jump();
         GroundPound();
-        SideSwitch();
-        //TODO
-        //FinishSideSwitch
-        //Crawl
-        //Find a way to transfer speed between sides
-
-
-        
+        Crouch();        
 
         rb.velocity = tempVelocity;
     }
@@ -151,6 +145,7 @@ public class CharacterController : MonoBehaviour
         }
         else if ((lastTimeTouchedGround - startedJumpBuffer > jumpBuffer)) isJumpBuffered = false;
         if (((pressedJump || isJumpBuffered) && isGrounded) || coyoteActive) {
+            speedBeforeJump = tempVelocity.x;
             tempVelocity.y = jumpForce;
             pressedJump = false;
             isJumping = true;
@@ -167,8 +162,8 @@ public class CharacterController : MonoBehaviour
         if (isGroundPounding) {
             tempVelocity = new Vector2(0, -groundPoundForce);
             if (isGrounded){
-                isGroundPounding = false;
-                tempVelocity.x = speedXBeforeGP;
+                tempVelocity = new Vector2(0, 0);
+                Invoke("DeactivateGroundPound", 0.1f);
             }
         }
         if (pressedGroundPound && !isGrounded)
@@ -182,13 +177,41 @@ public class CharacterController : MonoBehaviour
         }
     }
 
-    private void SideSwitch() {
-        //Compare the transform change with the speed, and then apply a buffer to send flying in the oposite direction while maintaining the last speed
+    private void DeactivateGroundPound() {
+        if (horizontalInput != 0 && !pressedJump)
+        {
+            int signal = horizontalInput > 0 ? 1 : -1;
+            isGroundPounding = false;
+            tempVelocity.x = Mathf.Abs(speedXBeforeGP) * signal;
+        }
+        else {
+            isGroundPounding = false;
+            tempVelocity.x = 0;
+            if (pressedJump) isJumpBuffered = true;
+        }
+    }
+
+    private void Crouch() {
+        if (verticalInput < 0)
+        {
+            if (transform.localScale == Vector3.one) {
+                if(isGrounded) tempVelocity.y += -20;
+                transform.localScale = new Vector3(transform.localScale.x, transform.localScale.y / 2, transform.localScale.z);
+                isCrouching = true;
+            }
+        }
+        else {
+            if (!isHittingHead){
+                transform.localScale = Vector3.one;
+                isCrouching = false;
+            }
+        }
     }
 
     private void Move()
     {
-         if (Mathf.Abs(horizontalInput) > 0)
+
+         if ((Mathf.Abs(horizontalInput) > 0))
         {   // About Walking
             if (!pressedRun && tempVelocity.x > maxSpeed) {
                 tempVelocity.x = maxSpeed;
@@ -201,14 +224,24 @@ public class CharacterController : MonoBehaviour
             {
                 tempVelocity += horizontalInput * Vector2.right * deceleration/4;
             }
-            if ((Mathf.Abs(tempVelocity.x) <= maxSpeed) && isJumping && !pressedRun) {
+            if ((Mathf.Abs(tempVelocity.x) <= speedBeforeJump + (deceleration / 4 * airAcceleration)) && isJumping) {
                 tempVelocity += horizontalInput * Vector2.right * deceleration / 4 * airAcceleration;
             }
             // End Walking
+
             if (pressedRun) { // About running
                 if (Mathf.Abs(tempVelocity.x) <= maxSpeedRun) tempVelocity += horizontalInput * Vector2.right * speed;
-                if ((Mathf.Abs(tempVelocity.x) <= maxSpeedRun) && isJumping) tempVelocity += horizontalInput * Vector2.right * deceleration / 4 * airAcceleration;
             }
+            // End Running
+
+            // Crouching
+            if (isCrouching && !isJumping)
+            {
+                if (Mathf.Abs(tempVelocity.x) <= maxSpeed * 0.5f) tempVelocity += horizontalInput * Vector2.right * speed;
+                else { tempVelocity.x = horizontalInput * maxSpeed * 0.5f; }
+            }
+            // End Crouching
+        
         }
         else
         {
@@ -232,12 +265,14 @@ public class CharacterController : MonoBehaviour
 
         //bool hitGround = Physics2D.Raycast(bottomCenter, directionDown, 0.05f, ~playerLayer);
 
-        //Vector2 topCenter = new Vector2(col.bounds.center.x, col.bounds.max.y);
-        //Vector2 directionUp = Vector2.up;
+        Vector2 topCenter = new Vector2(col.bounds.center.x, col.bounds.max.y);
+        Vector2 directionUp = Vector2.up;
 
-        //bool hitCeiling = Physics2D.Raycast(topCenter, directionUp, 0.05f, ~playerLayer);
+        bool hitCeiling = Physics2D.Raycast(topCenter, directionUp, 0.05f, ~playerLayer);
         bool hitGround = Physics2D.CapsuleCast(col.bounds.center, col.bounds.size - new Vector3(0.1f, 0f, 0f), col.direction, 0, Vector2.down, 0.05f, ~playerLayer);
         //bool hitCeiling= Physics2D.CapsuleCast(col.bounds.center, col.size, col.direction, 0, Vector2.up, 0.05f, ~playerLayer);
+
+        isHittingHead = hitCeiling;
         if (hitGround && tempVelocity.y <=0)
         {
             isGrounded = true;
@@ -248,10 +283,10 @@ public class CharacterController : MonoBehaviour
         {
             isGrounded = false;
         }
-        //if (!isGrounded && hitCeiling)
-        //{
-        //    //tempVelocity.y = 0;
-        //}
+        if (!isGrounded && hitCeiling)
+        {
+            tempVelocity.y = 0;
+        }
     }
 
 }
