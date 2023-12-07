@@ -60,6 +60,7 @@ public class CharacterController : MonoBehaviour
     private bool pressedGroundPound = false;
     private bool isGroundPounding = false;
     private float speedXBeforeGP = 0;
+    private bool superJump = false;
 
     //Crouch
     private bool isCrouching = false;
@@ -105,6 +106,7 @@ public class CharacterController : MonoBehaviour
 
         // GroundPound
         if(Input.GetKeyDown(KeyCode.Z)) pressedGroundPound = true;
+        superJump = ((Input.GetKey(KeyCode.Space)) && isGroundPounding) ? true : false;
 
         horizontalInput = Input.GetAxisRaw("Horizontal");
         verticalInput = Input.GetAxisRaw("Vertical");
@@ -163,7 +165,7 @@ public class CharacterController : MonoBehaviour
             tempVelocity = new Vector2(0, -groundPoundForce);
             if (isGrounded){
                 tempVelocity = new Vector2(0, 0);
-                Invoke("DeactivateGroundPound", 0.1f);
+                Invoke("DeactivateGroundPound", 0.2f);
             }
         }
         if (pressedGroundPound && !isGrounded)
@@ -178,16 +180,18 @@ public class CharacterController : MonoBehaviour
     }
 
     private void DeactivateGroundPound() {
-        if (horizontalInput != 0 && !pressedJump)
+        if (horizontalInput != 0 && !superJump)
         {
             int signal = horizontalInput > 0 ? 1 : -1;
             isGroundPounding = false;
             tempVelocity.x = Mathf.Abs(speedXBeforeGP) * signal;
         }
-        else {
+        if(superJump){
             isGroundPounding = false;
+            isJumpBuffered = false;
             tempVelocity.x = 0;
-            if (pressedJump) isJumpBuffered = true;
+            tempVelocity.y = jumpForce * 1.25f;
+            isJumping = true;
         }
     }
 
@@ -224,7 +228,7 @@ public class CharacterController : MonoBehaviour
             {
                 tempVelocity += horizontalInput * Vector2.right * deceleration/4;
             }
-            if ((Mathf.Abs(tempVelocity.x) <= speedBeforeJump + (deceleration / 4 * airAcceleration)) && isJumping) {
+            if ((Mathf.Abs(tempVelocity.x) <= Mathf.Abs(speedBeforeJump + (deceleration / 4 * airAcceleration))) && isJumping) {
                 tempVelocity += horizontalInput * Vector2.right * deceleration / 4 * airAcceleration;
             }
             // End Walking
@@ -260,6 +264,7 @@ public class CharacterController : MonoBehaviour
 
     private void CheckCollision()
     {
+        Debug.Log(tempVelocity);
         //Vector2 bottomCenter = new Vector2(col.bounds.center.x, col.bounds.min.y);
         //Vector2 directionDown = Vector2.down;
 
@@ -269,7 +274,16 @@ public class CharacterController : MonoBehaviour
         Vector2 directionUp = Vector2.up;
 
         bool hitCeiling = Physics2D.Raycast(topCenter, directionUp, 0.05f, ~playerLayer);
-        bool hitGround = Physics2D.CapsuleCast(col.bounds.center, col.bounds.size - new Vector3(0.1f, 0f, 0f), col.direction, 0, Vector2.down, 0.05f, ~playerLayer);
+
+        float horizontalExtent = col.bounds.extents.x + 0.01f; 
+        Vector2 center = col.bounds.center;
+        Vector2 directionRight = Vector2.right;
+        Vector2 directionLeft = Vector2.left;
+
+        bool hitWallRight = Physics2D.Raycast(center, directionRight, horizontalExtent, ~playerLayer);
+        bool hitWallLeft = Physics2D.Raycast(center, directionLeft, horizontalExtent, ~playerLayer);
+
+        bool hitGround = Physics2D.CapsuleCast(col.bounds.center, col.bounds.size - new Vector3(0.2f, 0f, 0f), col.direction, 0, Vector2.down, 0.05f, ~playerLayer);
         //bool hitCeiling= Physics2D.CapsuleCast(col.bounds.center, col.size, col.direction, 0, Vector2.up, 0.05f, ~playerLayer);
 
         isHittingHead = hitCeiling;
@@ -285,7 +299,14 @@ public class CharacterController : MonoBehaviour
         }
         if (!isGrounded && hitCeiling)
         {
-            tempVelocity.y = 0;
+            tempVelocity.y = -gravity * 5;
+        }
+        if (hitWallLeft){
+            tempVelocity.x = tempVelocity.x<0? 0: tempVelocity.x;
+        }
+        if (hitWallRight)
+        {
+            tempVelocity.x = tempVelocity.x > 0 ? 0 : tempVelocity.x;
         }
     }
 
