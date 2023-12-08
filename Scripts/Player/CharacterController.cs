@@ -264,7 +264,6 @@ public class CharacterController : MonoBehaviour
 
     private void CheckCollision()
     {
-        Debug.Log(tempVelocity);
         //Vector2 bottomCenter = new Vector2(col.bounds.center.x, col.bounds.min.y);
         //Vector2 directionDown = Vector2.down;
 
