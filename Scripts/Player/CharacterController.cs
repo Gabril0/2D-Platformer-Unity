@@ -18,6 +18,10 @@ public class CharacterController : MonoBehaviour
     [Header("Collision")]
     [SerializeField] private bool isGrounded = false;
     [SerializeField] private LayerMask playerLayer;
+    [SerializeField] private LayerMask platformLayer;
+    private Rigidbody2D rb;
+    private CapsuleCollider2D col;
+    private Vector2 tempVelocity;
 
 
     [Header("Jump")]
@@ -36,7 +40,7 @@ public class CharacterController : MonoBehaviour
     [SerializeField] private float maxJumpTime = 0.8f;
     private float variableJumpHeight;
     private bool releasedJumpButton = false;
-    [SerializeField] float minimumJumpHeight = 0.5f;
+    [SerializeField] private float minimumJumpHeight = 0.5f;
 
     //Jump Buffer
     private float lastTimeTouchedGround = 0;
@@ -66,11 +70,7 @@ public class CharacterController : MonoBehaviour
     private bool isCrouching = false;
     private bool isHittingHead = false;
 
-
-    //Collision and Physics
-    private Rigidbody2D rb;
-    private CapsuleCollider2D col;
-    private Vector2 tempVelocity;
+    
 
     void Start()
     {
@@ -273,7 +273,8 @@ public class CharacterController : MonoBehaviour
         Vector2 topCenter = new Vector2(col.bounds.center.x, col.bounds.max.y);
         Vector2 directionUp = Vector2.up;
 
-        bool hitCeiling = Physics2D.Raycast(topCenter, directionUp, 0.05f, ~playerLayer);
+        bool hitCeiling = Physics2D.Raycast(topCenter, directionUp, 0.05f, ~playerLayer); 
+        hitCeiling = hitCeiling && !Physics2D.Raycast(topCenter, directionUp, 0.05f, ~platformLayer); 
 
         float horizontalExtent = col.bounds.extents.x + 0.01f; 
         Vector2 center = col.bounds.center;
@@ -299,6 +300,7 @@ public class CharacterController : MonoBehaviour
         }
         if (!isGrounded && hitCeiling)
         {
+            Debug.Log("CUU");
             tempVelocity.y = -gravity * 5;
         }
         if (hitWallLeft){
@@ -309,5 +311,7 @@ public class CharacterController : MonoBehaviour
             tempVelocity.x = tempVelocity.x > 0 ? 0 : tempVelocity.x;
         }
     }
+
+
 
 }
