@@ -207,6 +207,7 @@ public class CharacterController : MonoBehaviour
         else {
             if (!isHittingHead){
                 transform.localScale = Vector3.one;
+                
                 isCrouching = false;
             }
         }

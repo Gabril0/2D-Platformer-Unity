@@ -5,45 +5,28 @@ using UnityEngine;
 public class Parallax : MonoBehaviour
 {
     [SerializeField] private float parallaxSpeed = 0.5f;
-    [SerializeField] private bool isRepeatable;
-    private Transform cameraPosition;
-    private Vector3 lastPosition = Vector3.zero;
-    private SpriteRenderer spriteRenderer;
-    private float distanceTraveled = 0;
-    private float initialDistanceOffset;
+    private Transform cam;
+    private float length;
+    private float startingPosition;
+
     void Start()
     {
-        cameraPosition = GameObject.Find("Main Camera").GetComponent<Transform>();
-        spriteRenderer = GetComponent<SpriteRenderer>();
-        initialDistanceOffset = cameraPosition.position.x - transform.position.x;
+        cam = GameObject.Find("Main Camera").GetComponent<Transform>();
+        startingPosition = transform.position.x;
+        length = GetComponent<SpriteRenderer>().bounds.size.x/4;
     }
 
     // Update is called once per frame
     void LateUpdate()
     {
-        if (cameraPosition != null){
-            if (isRepeatable)
-            {
-                Debug.Log(lastPosition.x + " " + cameraPosition.position.x);
-                if (lastPosition == Vector3.zero) { lastPosition = cameraPosition.position; }
-                if (lastPosition.x != cameraPosition.position.x)
-                {
-                    transform.position += (cameraPosition.position - lastPosition) * 0.5f;
-                    distanceTraveled += (cameraPosition.position.x - lastPosition.x) * 0.5f;
-                }
+        if (cam != null){
+            float temp = (cam.position.x * (1 - parallaxSpeed));
+            float distance = (cam.position.x * parallaxSpeed);
 
+            transform.position = new Vector3(startingPosition + distance, transform.position.y, transform.position.z);
 
-                lastPosition = cameraPosition.position;
-                BackGroundRepeat();
-            }
-            else { }
-        }
-    }
-
-    private void BackGroundRepeat() {
-        if (distanceTraveled > spriteRenderer.size.x / 2) {
-            transform.position = new Vector3(cameraPosition.position.x + initialDistanceOffset, transform.position.y, transform.position.z);
-            distanceTraveled = 0;
+            if (temp > startingPosition + length) startingPosition += length;
+            else if(temp < startingPosition - length) startingPosition -= length;
         }
     }
 }
