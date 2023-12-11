@@ -678,6 +678,17 @@ PrefabInstance:
       propertyPath: m_Name
       value: TODO
       objectReference: {fileID: 0}
+    - target: {fileID: 5850040395381987627, guid: 6d51d57ce0139cb4da072164444d751d, type: 3}
+      propertyPath: m_IsActive
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 5850040396349469788, guid: 6d51d57ce0139cb4da072164444d751d, type: 3}
+      propertyPath: m_text
+      value: "TODO: \n-Fix player is  grounded with platforms\n- Make the first World,
+        about a evil lab, with more blue colors than white and strong blue lights//
+        make it  a life size pill\n- Second World, rooftops\n- Third World, make
+        it in space"
+      objectReference: {fileID: 0}
     m_RemovedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: 6d51d57ce0139cb4da072164444d751d, type: 3}
 --- !u!1001 &7518216035365397353
@@ -810,7 +821,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 7786166384467067087, guid: 9ddc3227bbddb6f4682b60232d230529, type: 3}
       propertyPath: m_Size.y
-      value: 21.36
+      value: 38.4
       objectReference: {fileID: 0}
     - target: {fileID: 7786166384467067087, guid: 9ddc3227bbddb6f4682b60232d230529, type: 3}
       propertyPath: m_Sprite

@@ -300,7 +300,6 @@ public class CharacterController : MonoBehaviour
         }
         if (!isGrounded && hitCeiling)
         {
-            Debug.Log("CUU");
             tempVelocity.y = -gravity * 5;
         }
         if (hitWallLeft){
