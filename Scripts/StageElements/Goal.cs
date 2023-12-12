@@ -27,10 +27,10 @@ public class Goal : MonoBehaviour
         }
         
     }
-
-    private void OnCollisionEnter2D(Collision2D collision)
+    private void OnTriggerEnter2D(Collider2D collision)
     {
-        if (collision.collider.CompareTag("Player")) {
+        if (collision.CompareTag("Player"))
+        {
             endingTime = currentTime;
             isBeaten = true;
         }

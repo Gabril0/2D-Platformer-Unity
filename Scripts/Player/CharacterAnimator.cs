@@ -9,6 +9,7 @@ public class CharacterAnimator : MonoBehaviour
     private CharacterController controller;
     private SpriteRenderer spriteRenderer;
     private TrailRenderer trailRenderer;
+    private Animator animator;
     [SerializeField] private GameObject pivot;
     void Awake()
     {
@@ -16,12 +17,14 @@ public class CharacterAnimator : MonoBehaviour
         spriteRenderer = GetComponent<SpriteRenderer>();
         trailRenderer = pivot.GetComponent<TrailRenderer>();
         controller = pivot.GetComponent<CharacterController>();
+        animator = GetComponent<Animator>();
     }
 
     void LateUpdate()
     {
         CheckDirection();
         TrailUpdater();
+        SpeedAnimation();
 
         transform.position = playerRb.transform.position;
     }
@@ -56,5 +59,11 @@ public class CharacterAnimator : MonoBehaviour
         gradient.SetKeys(colorKeys, alphaKeys);
 
         trailRenderer.colorGradient = gradient;
+    }
+
+    private void SpeedAnimation() {
+        animator.SetFloat("Speed", Mathf.Abs(playerRb.velocity.x));
+        if (Mathf.Abs(playerRb.velocity.x) > 0) animator.speed = Mathf.Abs(playerRb.velocity.x) * 2 / controller.maxSpeedRun;
+        else animator.speed = 1;
     }
 }
