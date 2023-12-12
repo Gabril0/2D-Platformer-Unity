@@ -18,7 +18,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 0
+  m_IsActive: 1
 --- !u!224 &5850040395381987623
 RectTransform:
   m_ObjectHideFlags: 0
@@ -167,9 +167,10 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_text: "TODO: \n- Make the first World, about a evil lab, with more blue colors
-    than white and strong blue lights// make it  a life size pill\n- Second World,
-    rooftops\n- Third World, make it in space"
+  m_text: "TODO: \n-Fix player is  grounded with platforms\n- Make the trail opacity
+    change with the player speed \n- Make the first World, about a evil lab, with
+    more blue colors than white and strong blue lights// make it  a life size pill\n-
+    Second World, rooftops\n- Third World, make it in space"
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
   m_sharedMaterial: {fileID: 2180264, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}

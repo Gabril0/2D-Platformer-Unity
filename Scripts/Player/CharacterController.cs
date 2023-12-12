@@ -11,7 +11,7 @@ public class CharacterController : MonoBehaviour
     [Header("Walking")]
     [SerializeField] private float deceleration = 1.5f;
     [SerializeField] private float speed = 1.5f;
-    [SerializeField] private float maxSpeed = 15f;
+    [SerializeField] public float maxSpeed = 15f; //{get;set;}
     private float horizontalInput;
     private float verticalInput;
 
@@ -22,9 +22,12 @@ public class CharacterController : MonoBehaviour
     private Rigidbody2D rb;
     private CapsuleCollider2D col;
     private Vector2 tempVelocity;
+    private bool isCollidingWithOneWayPlatforms = false;
+    bool hitWallRight = false;
+    bool hitWallLeft = false;
 
 
-    [Header("Jump")]
+[Header("Jump")]
     [SerializeField] private float jumpDeceleration = 15;
     [SerializeField] private float airAcceleration = 0.4f;
     [SerializeField] private float gravity = 9.8f;
@@ -56,7 +59,7 @@ public class CharacterController : MonoBehaviour
     private bool coyoteActive = false;
 
     [Header("Run")]
-    [SerializeField] float maxSpeedRun = 25;
+    [SerializeField] public float maxSpeedRun = 25;
     private bool pressedRun = false;
 
     [Header("GroundPound")]
@@ -69,6 +72,7 @@ public class CharacterController : MonoBehaviour
     //Crouch
     private bool isCrouching = false;
     private bool isHittingHead = false;
+
 
     
 
@@ -217,9 +221,20 @@ public class CharacterController : MonoBehaviour
     {
 
          if ((Mathf.Abs(horizontalInput) > 0))
-        {   // About Walking
-            if (!pressedRun && tempVelocity.x > maxSpeed) {
-                tempVelocity.x = maxSpeed;
+        {   
+            // Crouching
+            if (isCrouching && !isJumping)
+            {
+                if (Mathf.Abs(tempVelocity.x) <= maxSpeed * 0.5f) tempVelocity += horizontalInput * Vector2.right * speed;
+                else { tempVelocity.x = horizontalInput * maxSpeed * 0.5f; }
+            }
+            // Checking collisions
+            if (horizontalInput > 0 && hitWallRight) { tempVelocity -= horizontalInput * Vector2.right * speed * 2; return; }
+            if (horizontalInput < 0 && hitWallLeft) { tempVelocity -= horizontalInput * Vector2.right * speed * 2; return; }
+
+            // Walking
+            if (!pressedRun && Mathf.Abs(tempVelocity.x) > maxSpeed) {
+                tempVelocity.x = maxSpeed * horizontalInput;
             }
             if (Mathf.Abs(tempVelocity.x) <= maxSpeed && !pressedRun)
             {
@@ -232,21 +247,12 @@ public class CharacterController : MonoBehaviour
             if ((Mathf.Abs(tempVelocity.x) <= Mathf.Abs(speedBeforeJump + (deceleration / 4 * airAcceleration))) && isJumping) {
                 tempVelocity += horizontalInput * Vector2.right * deceleration / 4 * airAcceleration;
             }
-            // End Walking
 
-            if (pressedRun) { // About running
+            // Running
+            if (pressedRun) { 
                 if (Mathf.Abs(tempVelocity.x) <= maxSpeedRun) tempVelocity += horizontalInput * Vector2.right * speed;
             }
-            // End Running
-
-            // Crouching
-            if (isCrouching && !isJumping)
-            {
-                if (Mathf.Abs(tempVelocity.x) <= maxSpeed * 0.5f) tempVelocity += horizontalInput * Vector2.right * speed;
-                else { tempVelocity.x = horizontalInput * maxSpeed * 0.5f; }
-            }
-            // End Crouching
-        
+          
         }
         else
         {
@@ -265,27 +271,18 @@ public class CharacterController : MonoBehaviour
 
     private void CheckCollision()
     {
-        //Vector2 bottomCenter = new Vector2(col.bounds.center.x, col.bounds.min.y);
-        //Vector2 directionDown = Vector2.down;
-
-        //bool hitGround = Physics2D.Raycast(bottomCenter, directionDown, 0.05f, ~playerLayer);
-
         Vector2 topCenter = new Vector2(col.bounds.center.x, col.bounds.max.y);
-        Vector2 directionUp = Vector2.up;
 
-        bool hitCeiling = Physics2D.Raycast(topCenter, directionUp, 0.05f, ~playerLayer); 
-        hitCeiling = hitCeiling && !Physics2D.Raycast(topCenter, directionUp, 0.05f, ~platformLayer); 
+        bool hitCeiling = Physics2D.Raycast(topCenter, Vector2.up, 0.05f, ~playerLayer); 
+        hitCeiling = hitCeiling && !Physics2D.Raycast(topCenter, Vector2.up, 0.05f, ~platformLayer); 
 
-        float horizontalExtent = col.bounds.extents.x + 0.01f; 
-        Vector2 center = col.bounds.center;
-        Vector2 directionRight = Vector2.right;
-        Vector2 directionLeft = Vector2.left;
+        float horizontalExtent = col.bounds.extents.x + 0.01f;
 
-        bool hitWallRight = Physics2D.Raycast(center, directionRight, horizontalExtent, ~playerLayer);
-        bool hitWallLeft = Physics2D.Raycast(center, directionLeft, horizontalExtent, ~playerLayer);
+        hitWallRight = Physics2D.Raycast(col.bounds.center, Vector2.right, horizontalExtent, ~playerLayer);
+        hitWallLeft = Physics2D.Raycast(col.bounds.center, Vector3.left, horizontalExtent, ~playerLayer);
+
 
         bool hitGround = Physics2D.CapsuleCast(col.bounds.center, col.bounds.size - new Vector3(0.2f, 0f, 0f), col.direction, 0, Vector2.down, 0.05f, ~playerLayer);
-        //bool hitCeiling= Physics2D.CapsuleCast(col.bounds.center, col.size, col.direction, 0, Vector2.up, 0.05f, ~playerLayer);
 
         isHittingHead = hitCeiling;
         if (hitGround && tempVelocity.y <=0)
@@ -302,15 +299,17 @@ public class CharacterController : MonoBehaviour
         {
             tempVelocity.y = -gravity * 5;
         }
-        if (hitWallLeft){
-            tempVelocity.x = tempVelocity.x<0? 0: tempVelocity.x;
+        bool isStuck = Physics2D.CapsuleCast(col.bounds.center, col.bounds.size - new Vector3(0f, 0.2f, 0f), col.direction, 0, Vector2.up, 0.1f, platformLayer);
+
+        if (isGrounded && isStuck && isCollidingWithOneWayPlatforms) { // To prevent the player from getting stuck in platforms, as I am using custom physics
+            isGrounded = false;
+            isJumping = true;
         }
-        if (hitWallRight)
-        {
-            tempVelocity.x = tempVelocity.x > 0 ? 0 : tempVelocity.x;
-        }
+
     }
 
-
-
+    private void OnCollisionStay2D(Collision2D collision)
+    {
+        isCollidingWithOneWayPlatforms = collision.collider.CompareTag("Platform")? true : false;
+    }
 }
