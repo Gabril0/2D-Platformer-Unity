@@ -26,7 +26,6 @@ public class CharacterAnimator : MonoBehaviour
         TrailUpdater();
         SpeedAnimation();
 
-        transform.position = playerRb.transform.position;
     }
 
     private void CheckDirection() {
