@@ -15,7 +15,7 @@ public class CharacterAnimator : MonoBehaviour
     {
         playerRb = pivot.GetComponent<Rigidbody2D>();
         spriteRenderer = GetComponent<SpriteRenderer>();
-        trailRenderer = pivot.GetComponent<TrailRenderer>();
+        trailRenderer = pivot.GetComponentInChildren<TrailRenderer>();
         controller = pivot.GetComponent<CharacterController>();
         animator = GetComponent<Animator>();
     }
@@ -62,7 +62,7 @@ public class CharacterAnimator : MonoBehaviour
 
     private void SpeedAnimation() {
         animator.SetFloat("Speed", Mathf.Abs(playerRb.velocity.x));
-        if (Mathf.Abs(playerRb.velocity.x) > 0) animator.speed = Mathf.Abs(playerRb.velocity.x) * 2 / controller.maxSpeedRun;
+        if (Mathf.Abs(playerRb.velocity.x) > 0) animator.speed = Mathf.Abs(playerRb.velocity.x) * 2 / controller.originalMaxSpeed;
         else animator.speed = 1;
     }
 }

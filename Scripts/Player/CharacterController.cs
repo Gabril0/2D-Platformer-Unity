@@ -1,3 +1,4 @@
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using Unity.VisualScripting;
@@ -17,8 +18,9 @@ public class CharacterController : MonoBehaviour
 
     [Header("Collision")]
     [SerializeField] private bool isGrounded = false;
-    [SerializeField] private LayerMask playerLayer;
-    [SerializeField] private LayerMask platformLayer;
+    [SerializeField] public LayerMask PlayerLayer;
+    [SerializeField] public LayerMask PlatformLayer;
+    [SerializeField] public LayerMask EnemyLayer;
     private Rigidbody2D rb;
     private CapsuleCollider2D col;
     private Vector2 tempVelocity;
@@ -60,6 +62,7 @@ public class CharacterController : MonoBehaviour
 
     [Header("Run")]
     [SerializeField] public float maxSpeedRun = 25;
+    public float originalMaxSpeed;
     private bool pressedRun = false;
 
     [Header("GroundPound")]
@@ -73,13 +76,21 @@ public class CharacterController : MonoBehaviour
     private bool isCrouching = false;
     private bool isHittingHead = false;
 
+    //Boost by changing max speed
+    private float timeSinceStartedBoost = 0;
 
-    
+    //Health
+    [SerializeField] int heath = 3;
+    private bool hitStun = false;
+
+
+
 
     void Start()
     {
         rb = GetComponent<Rigidbody2D>();
         col = GetComponent<CapsuleCollider2D>();
+        originalMaxSpeed = maxSpeedRun;
     }
     private void Update()
     {
@@ -120,6 +131,7 @@ public class CharacterController : MonoBehaviour
     void FixedUpdate()
     {
         CheckCollision();
+        CheckHitStun();
         Move();
         ApplyGravity();
         Jump();
@@ -220,13 +232,13 @@ public class CharacterController : MonoBehaviour
     private void Move()
     {
 
-         if ((Mathf.Abs(horizontalInput) > 0))
+         if ((Mathf.Abs(horizontalInput) > 0) && !hitStun)
         {   
             // Crouching
             if (isCrouching && !isJumping)
             {
                 if (Mathf.Abs(tempVelocity.x) <= maxSpeed * 0.5f) tempVelocity += horizontalInput * Vector2.right * speed;
-                else { tempVelocity.x = horizontalInput * maxSpeed * 0.5f; }
+                else { tempVelocity.x -= horizontalInput * maxSpeed/20; }
             }
             // Checking collisions
             if (horizontalInput > 0 && hitWallRight) { tempVelocity -= horizontalInput * Vector2.right * speed * 2; return; }
@@ -273,16 +285,16 @@ public class CharacterController : MonoBehaviour
     {
         Vector2 topCenter = new Vector2(col.bounds.center.x, col.bounds.max.y);
 
-        bool hitCeiling = Physics2D.Raycast(topCenter, Vector2.up, 0.05f, ~playerLayer); 
-        hitCeiling = hitCeiling && !Physics2D.Raycast(topCenter, Vector2.up, 0.05f, ~platformLayer); 
+        bool hitCeiling = Physics2D.Raycast(topCenter, Vector2.up, 0.05f, ~PlayerLayer); 
+        hitCeiling = hitCeiling && !Physics2D.Raycast(topCenter, Vector2.up, 0.05f, ~PlatformLayer); 
 
         float horizontalExtent = col.bounds.extents.x + 0.01f;
 
-        hitWallRight = Physics2D.Raycast(col.bounds.center, Vector2.right, horizontalExtent, ~playerLayer);
-        hitWallLeft = Physics2D.Raycast(col.bounds.center, Vector3.left, horizontalExtent, ~playerLayer);
+        hitWallRight = Physics2D.Raycast(col.bounds.center, Vector2.right, horizontalExtent, ~PlayerLayer);
+        hitWallLeft = Physics2D.Raycast(col.bounds.center, Vector3.left, horizontalExtent, ~PlayerLayer);
 
 
-        bool hitGround = Physics2D.CapsuleCast(col.bounds.center, col.bounds.size - new Vector3(0.2f, 0f, 0f), col.direction, 0, Vector2.down, 0.05f, ~playerLayer);
+        bool hitGround = Physics2D.CapsuleCast(col.bounds.center, col.bounds.size - new Vector3(0.2f, 0f, 0f), col.direction, 0, Vector2.down, 0.05f, ~PlayerLayer);
 
         isHittingHead = hitCeiling;
         if (hitGround && tempVelocity.y <=0)
@@ -299,13 +311,41 @@ public class CharacterController : MonoBehaviour
         {
             tempVelocity.y = -gravity * 5;
         }
-        bool isStuck = Physics2D.CapsuleCast(col.bounds.center, col.bounds.size - new Vector3(0f, 0.2f, 0f), col.direction, 0, Vector2.up, 0.1f, platformLayer);
+        bool isStuck = Physics2D.CapsuleCast(col.bounds.center, col.bounds.size - new Vector3(0f, 0.2f, 0f), col.direction, 0, Vector2.up, 0.1f, PlatformLayer);
 
         if (isGrounded && isStuck && isCollidingWithOneWayPlatforms) { // To prevent the player from getting stuck in platforms, as I am using custom physics
             isGrounded = false;
             isJumping = true;
         }
 
+    }
+
+    public void ChangeMaxSpeed(float percentage, float duration) {
+        if (timeSinceStartedBoost == 0) {
+            tempVelocity = new Vector2(tempVelocity.x * 1.2f, tempVelocity.y + jumpForce);
+        }
+        timeSinceStartedBoost += Time.deltaTime;
+        if (timeSinceStartedBoost < duration)
+        {
+            maxSpeedRun = maxSpeedRun * percentage;
+        }
+        else { maxSpeedRun = originalMaxSpeed; }
+    }
+
+    private void OnCollisionEnter2D(Collision2D collision)
+    {
+        if (collision.collider.CompareTag("Enemy") && !Physics2D.CapsuleCast(col.bounds.center, col.bounds.size - new Vector3(0.2f, 0f, 0f), col.direction, 0, Vector2.down, 0.05f, EnemyLayer)) {
+            hitStun = true;
+            tempVelocity.y = jumpForce;
+            tempVelocity.x = -1 * Mathf.Sign(tempVelocity.x);
+        }
+    }
+
+    private void CheckHitStun() {
+        if (hitStun) {
+            tempVelocity.x = Mathf.Abs(tempVelocity.x) < maxSpeed? tempVelocity.x * (maxSpeed/3) : tempVelocity.x;
+            hitStun = !isGrounded ? true : false;
+        }
     }
 
     private void OnCollisionStay2D(Collision2D collision)
