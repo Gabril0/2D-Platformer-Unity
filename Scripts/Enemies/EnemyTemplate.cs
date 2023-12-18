@@ -4,13 +4,14 @@ using UnityEngine;
 
 public class EnemyTemplate : MonoBehaviour
 {
+    [Header("Basic Stats")]
     [SerializeField] protected int healthHit;
     [SerializeField] protected int damage;
     [SerializeField] protected float playerSpeedBoost;
     [SerializeField] protected float playerSpeedBoostDuration;
-    private CharacterController playerController;
-    private BoxCollider2D boxCollider;
-    private Rigidbody2D rb;
+    protected CharacterController playerController;
+    protected BoxCollider2D boxCollider;
+    protected Rigidbody2D rb;
     // Start is called before the first frame update
     void Start()
     {
@@ -20,7 +21,7 @@ public class EnemyTemplate : MonoBehaviour
     }
 
     // Update is called once per frame
-    void Update()
+    void FixedUpdate()
     {
         if (healthHit > 0)
         {
@@ -38,15 +39,20 @@ public class EnemyTemplate : MonoBehaviour
         }
     }
 
-    protected void EnemyBehaviour() { }
+    protected virtual void EnemyBehaviour() { }
 
     private bool CheckHead() {
-        return Physics2D.BoxCast(boxCollider.bounds.center,boxCollider.bounds.size, transform.rotation.eulerAngles.z, Vector2.up, 0.02f, playerController.PlayerLayer);
+        return Physics2D.BoxCast(boxCollider.bounds.center, boxCollider.bounds.size, transform.rotation.eulerAngles.z, Vector2.up, 0.1f, playerController.PlayerLayer); ;
+    }
+
+    protected bool IsOnGround() {
+        return Physics2D.BoxCast(boxCollider.bounds.center, boxCollider.bounds.size, transform.rotation.eulerAngles.z, Vector2.down, 0.02f, ~playerController.PlayerLayer & ~playerController.EnemyLayer); ;
     }
 
     private void OnCollisionEnter2D(Collision2D collision)
     {
         if (collision.collider.CompareTag("Player") && CheckHead()) {
+            playerController.HitJump();
             healthHit -= 1;
         }
     }

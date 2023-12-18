@@ -82,6 +82,7 @@ public class CharacterController : MonoBehaviour
     //Health
     [SerializeField] int heath = 3;
     private bool hitStun = false;
+    private int reverseDirection = 0;
 
 
 
@@ -95,6 +96,8 @@ public class CharacterController : MonoBehaviour
     private void Update()
     {
         InputManager();
+        CheckCollision();
+        CheckHitStun();
     }
 
     private void InputManager()
@@ -130,8 +133,7 @@ public class CharacterController : MonoBehaviour
 
     void FixedUpdate()
     {
-        CheckCollision();
-        CheckHitStun();
+        
         Move();
         ApplyGravity();
         Jump();
@@ -162,7 +164,7 @@ public class CharacterController : MonoBehaviour
             isJumpBuffered = true;
         }
         else if ((lastTimeTouchedGround - startedJumpBuffer > jumpBuffer)) isJumpBuffered = false;
-        if (((pressedJump || isJumpBuffered) && isGrounded) || coyoteActive) {
+        if (((pressedJump || isJumpBuffered) && isGrounded) || (coyoteActive && !isJumping)) {
             speedBeforeJump = tempVelocity.x;
             tempVelocity.y = jumpForce;
             pressedJump = false;
@@ -177,7 +179,7 @@ public class CharacterController : MonoBehaviour
     }
 
     private void GroundPound(){// For the move where the player change directions while keeping the speed
-        if (isGroundPounding) {
+        if (isGroundPounding && !hitStun) {
             tempVelocity = new Vector2(0, -groundPoundForce);
             if (isGrounded){
                 tempVelocity = new Vector2(0, 0);
@@ -321,9 +323,6 @@ public class CharacterController : MonoBehaviour
     }
 
     public void ChangeMaxSpeed(float percentage, float duration) {
-        if (timeSinceStartedBoost == 0) {
-            tempVelocity = new Vector2(tempVelocity.x * 1.2f, tempVelocity.y + jumpForce);
-        }
         timeSinceStartedBoost += Time.deltaTime;
         if (timeSinceStartedBoost < duration)
         {
@@ -332,18 +331,24 @@ public class CharacterController : MonoBehaviour
         else { maxSpeedRun = originalMaxSpeed; }
     }
 
+    public void HitJump() {
+        isGroundPounding = false;
+        coyoteActive = true;
+    }
+
     private void OnCollisionEnter2D(Collision2D collision)
     {
         if (collision.collider.CompareTag("Enemy") && !Physics2D.CapsuleCast(col.bounds.center, col.bounds.size - new Vector3(0.2f, 0f, 0f), col.direction, 0, Vector2.down, 0.05f, EnemyLayer)) {
             hitStun = true;
-            tempVelocity.y = jumpForce;
-            tempVelocity.x = -1 * Mathf.Sign(tempVelocity.x);
+            tempVelocity.y = jumpForce* 0.7f;
+            reverseDirection =  -1 * (int)Mathf.Sign(tempVelocity.x);
+            tempVelocity.x = 0;
         }
     }
 
     private void CheckHitStun() {
         if (hitStun) {
-            tempVelocity.x = Mathf.Abs(tempVelocity.x) < maxSpeed? tempVelocity.x * (maxSpeed/3) : tempVelocity.x;
+            tempVelocity.x += Mathf.Abs(tempVelocity.x) <= maxSpeed? reverseDirection  * (maxSpeed/3) : 0;
             hitStun = !isGrounded ? true : false;
         }
     }
