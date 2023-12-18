@@ -15,12 +15,14 @@ public class CharacterController : MonoBehaviour
     [SerializeField] public float maxSpeed = 15f; //{get;set;}
     private float horizontalInput;
     private float verticalInput;
+    private int lastFrameDirection = 5;
 
     [Header("Collision")]
     [SerializeField] private bool isGrounded = false;
     [SerializeField] public LayerMask PlayerLayer;
     [SerializeField] public LayerMask PlatformLayer;
     [SerializeField] public LayerMask EnemyLayer;
+    [SerializeField] public LayerMask TriggerLayer;
     private Rigidbody2D rb;
     private CapsuleCollider2D col;
     private Vector2 tempVelocity;
@@ -69,6 +71,7 @@ public class CharacterController : MonoBehaviour
     [SerializeField] float groundPoundForce = 30;
     private bool pressedGroundPound = false;
     private bool isGroundPounding = false;
+    public bool justGroundPounded = false;
     private float speedXBeforeGP = 0;
     private bool superJump = false;
 
@@ -80,7 +83,7 @@ public class CharacterController : MonoBehaviour
     private float timeSinceStartedBoost = 0;
 
     //Health
-    [SerializeField] int heath = 3;
+    [SerializeField] int health = 3;
     private bool hitStun = false;
     private int reverseDirection = 0;
 
@@ -131,9 +134,9 @@ public class CharacterController : MonoBehaviour
 
     }
 
+
     void FixedUpdate()
     {
-        
         Move();
         ApplyGravity();
         Jump();
@@ -182,6 +185,7 @@ public class CharacterController : MonoBehaviour
         if (isGroundPounding && !hitStun) {
             tempVelocity = new Vector2(0, -groundPoundForce);
             if (isGrounded){
+                justGroundPounded = true;
                 tempVelocity = new Vector2(0, 0);
                 Invoke("DeactivateGroundPound", 0.2f);
             }
@@ -198,6 +202,7 @@ public class CharacterController : MonoBehaviour
     }
 
     private void DeactivateGroundPound() {
+        justGroundPounded = false;
         if (horizontalInput != 0 && !superJump)
         {
             int signal = horizontalInput > 0 ? 1 : -1;
@@ -233,9 +238,11 @@ public class CharacterController : MonoBehaviour
 
     private void Move()
     {
-
+        bool isTurning = false;
+        if (lastFrameDirection == 5) lastFrameDirection = (int)Mathf.Sign(horizontalInput);
+        if (lastFrameDirection != Mathf.Sign(horizontalInput)) isTurning = true;
          if ((Mathf.Abs(horizontalInput) > 0) && !hitStun)
-        {   
+        {
             // Crouching
             if (isCrouching && !isJumping)
             {
@@ -254,9 +261,9 @@ public class CharacterController : MonoBehaviour
             {
                 tempVelocity += horizontalInput * Vector2.right * speed;
             }
-            if (Mathf.Sign(horizontalInput) != Mathf.Sign(tempVelocity.x))
+            if ((Mathf.Sign(horizontalInput) != Mathf.Sign(tempVelocity.x)) || isTurning) //FIXMEEEE AND ALSO DO HIT PROTECTION
             {
-                tempVelocity += horizontalInput * Vector2.right * deceleration/4;
+                tempVelocity += horizontalInput * Vector2.right * deceleration / 4;
             }
             if ((Mathf.Abs(tempVelocity.x) <= Mathf.Abs(speedBeforeJump + (deceleration / 4 * airAcceleration))) && isJumping) {
                 tempVelocity += horizontalInput * Vector2.right * deceleration / 4 * airAcceleration;
@@ -281,22 +288,23 @@ public class CharacterController : MonoBehaviour
                 tempVelocity = new Vector2(0, tempVelocity.y);
             }
         }
+         lastFrameDirection = (int)Mathf.Sign(horizontalInput);
     }
 
     private void CheckCollision()
     {
         Vector2 topCenter = new Vector2(col.bounds.center.x, col.bounds.max.y);
 
-        bool hitCeiling = Physics2D.Raycast(topCenter, Vector2.up, 0.05f, ~PlayerLayer); 
+        bool hitCeiling = Physics2D.Raycast(topCenter, Vector2.up, 0.05f, ~PlayerLayer & ~TriggerLayer); 
         hitCeiling = hitCeiling && !Physics2D.Raycast(topCenter, Vector2.up, 0.05f, ~PlatformLayer); 
 
         float horizontalExtent = col.bounds.extents.x + 0.01f;
 
-        hitWallRight = Physics2D.Raycast(col.bounds.center, Vector2.right, horizontalExtent, ~PlayerLayer);
-        hitWallLeft = Physics2D.Raycast(col.bounds.center, Vector3.left, horizontalExtent, ~PlayerLayer);
+        hitWallRight = Physics2D.Raycast(col.bounds.center, Vector2.right, horizontalExtent, ~PlayerLayer & ~TriggerLayer);
+        hitWallLeft = Physics2D.Raycast(col.bounds.center, Vector3.left, horizontalExtent, ~PlayerLayer & ~TriggerLayer);
 
 
-        bool hitGround = Physics2D.CapsuleCast(col.bounds.center, col.bounds.size - new Vector3(0.2f, 0f, 0f), col.direction, 0, Vector2.down, 0.05f, ~PlayerLayer);
+        bool hitGround = Physics2D.CapsuleCast(col.bounds.center, col.bounds.size - new Vector3(0.2f, 0f, 0f), col.direction, 0, Vector2.down, 0.05f, ~PlayerLayer & ~TriggerLayer);
 
         isHittingHead = hitCeiling;
         if (hitGround && tempVelocity.y <=0)
@@ -336,13 +344,17 @@ public class CharacterController : MonoBehaviour
         coyoteActive = true;
     }
 
-    private void OnCollisionEnter2D(Collision2D collision)
+    private void OnCollisionStay2D(Collision2D collision)
     {
+        isCollidingWithOneWayPlatforms = collision.collider.CompareTag("Platform") ? true : false;
+
         if (collision.collider.CompareTag("Enemy") && !Physics2D.CapsuleCast(col.bounds.center, col.bounds.size - new Vector3(0.2f, 0f, 0f), col.direction, 0, Vector2.down, 0.05f, EnemyLayer)) {
-            hitStun = true;
+            if (!hitStun) {
             tempVelocity.y = jumpForce* 0.7f;
             reverseDirection =  -1 * (int)Mathf.Sign(tempVelocity.x);
             tempVelocity.x = 0;
+            }
+            hitStun = true;
         }
     }
 
@@ -351,10 +363,5 @@ public class CharacterController : MonoBehaviour
             tempVelocity.x += Mathf.Abs(tempVelocity.x) <= maxSpeed? reverseDirection  * (maxSpeed/3) : 0;
             hitStun = !isGrounded ? true : false;
         }
-    }
-
-    private void OnCollisionStay2D(Collision2D collision)
-    {
-        isCollidingWithOneWayPlatforms = collision.collider.CompareTag("Platform")? true : false;
     }
 }

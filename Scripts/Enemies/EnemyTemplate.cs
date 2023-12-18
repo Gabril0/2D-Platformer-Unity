@@ -18,6 +18,7 @@ public class EnemyTemplate : MonoBehaviour
         playerController = GameObject.Find("Player").GetComponentInChildren<CharacterController>();
         boxCollider = GetComponent<BoxCollider2D>();
         rb = GetComponent<Rigidbody2D>();
+        EnemyStart();
     }
 
     // Update is called once per frame
@@ -40,16 +41,17 @@ public class EnemyTemplate : MonoBehaviour
     }
 
     protected virtual void EnemyBehaviour() { }
+    protected virtual void EnemyStart() { }
 
     private bool CheckHead() {
-        return Physics2D.BoxCast(boxCollider.bounds.center, boxCollider.bounds.size, transform.rotation.eulerAngles.z, Vector2.up, 0.1f, playerController.PlayerLayer); ;
+        return Physics2D.BoxCast(boxCollider.bounds.center, boxCollider.bounds.size, transform.rotation.eulerAngles.z, Vector2.up, 0.2f, playerController.PlayerLayer); ;
     }
 
     protected bool IsOnGround() {
         return Physics2D.BoxCast(boxCollider.bounds.center, boxCollider.bounds.size, transform.rotation.eulerAngles.z, Vector2.down, 0.02f, ~playerController.PlayerLayer & ~playerController.EnemyLayer); ;
     }
 
-    private void OnCollisionEnter2D(Collision2D collision)
+    private void OnCollisionStay2D(Collision2D collision)
     {
         if (collision.collider.CompareTag("Player") && CheckHead()) {
             playerController.HitJump();

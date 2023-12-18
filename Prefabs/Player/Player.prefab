@@ -355,6 +355,10 @@ PrefabInstance:
       value: 64
       objectReference: {fileID: 0}
     - target: {fileID: 3513431177942252281, guid: 5bfcdae675e4d404d8018465dd5345ff, type: 3}
+      propertyPath: TriggerLayer.m_Bits
+      value: 256
+      objectReference: {fileID: 0}
+    - target: {fileID: 3513431177942252281, guid: 5bfcdae675e4d404d8018465dd5345ff, type: 3}
       propertyPath: PlatformLayer.m_Bits
       value: 8
       objectReference: {fileID: 0}
