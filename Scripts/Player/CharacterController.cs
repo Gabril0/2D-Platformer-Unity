@@ -74,6 +74,8 @@ public class CharacterController : MonoBehaviour
     public bool justGroundPounded = false;
     private float speedXBeforeGP = 0;
     private bool superJump = false;
+    private float groundPoundStopTime = 0;
+    private float groundPoundStopDuration = 0.2f;
 
     //Crouch
     private bool isCrouching = false;
@@ -84,6 +86,8 @@ public class CharacterController : MonoBehaviour
 
     //Health
     [SerializeField] int health = 3;
+    private bool canBeHit = true;
+    [SerializeField] private float IVFrames = 0.75f;
     private bool hitStun = false;
     private int reverseDirection = 0;
 
@@ -192,9 +196,20 @@ public class CharacterController : MonoBehaviour
         }
         if (pressedGroundPound && !isGrounded)
         {
-            isGroundPounding = true;
-            pressedGroundPound = false;
-            speedXBeforeGP = tempVelocity.x;
+            if(groundPoundStopTime == 0) speedXBeforeGP = tempVelocity.x;
+            groundPoundStopTime += Time.deltaTime;
+
+            if (groundPoundStopTime < groundPoundStopDuration) {
+
+                tempVelocity.x = 0;
+                tempVelocity.y = 0;
+            }
+            else {
+                isGroundPounding = true;
+                pressedGroundPound = false;
+                groundPoundStopTime = 0;
+            }
+
         }
         else {
             pressedGroundPound = false;
@@ -254,16 +269,18 @@ public class CharacterController : MonoBehaviour
             if (horizontalInput < 0 && hitWallLeft) { tempVelocity -= horizontalInput * Vector2.right * speed * 2; return; }
 
             // Walking
+            if ((Mathf.Sign(horizontalInput) != Mathf.Sign(tempVelocity.x)) || isTurning) 
+            {
+                tempVelocity += horizontalInput * Vector2.right * deceleration / 4;
+                lastFrameDirection = (int)Mathf.Sign(horizontalInput);
+                return;
+            }
             if (!pressedRun && Mathf.Abs(tempVelocity.x) > maxSpeed) {
                 tempVelocity.x = maxSpeed * horizontalInput;
             }
             if (Mathf.Abs(tempVelocity.x) <= maxSpeed && !pressedRun)
             {
                 tempVelocity += horizontalInput * Vector2.right * speed;
-            }
-            if ((Mathf.Sign(horizontalInput) != Mathf.Sign(tempVelocity.x)) || isTurning) //FIXMEEEE AND ALSO DO HIT PROTECTION
-            {
-                tempVelocity += horizontalInput * Vector2.right * deceleration / 4;
             }
             if ((Mathf.Abs(tempVelocity.x) <= Mathf.Abs(speedBeforeJump + (deceleration / 4 * airAcceleration))) && isJumping) {
                 tempVelocity += horizontalInput * Vector2.right * deceleration / 4 * airAcceleration;
@@ -277,13 +294,13 @@ public class CharacterController : MonoBehaviour
         }
         else
         {
-            if (Mathf.Abs(tempVelocity.x) > 0)
+            if (Mathf.Abs(tempVelocity.x) > 0 && !isJumping)
             {
                 tempVelocity -= tempVelocity.normalized * deceleration;
 
                 
             }
-            if (Mathf.Abs(tempVelocity.x) <= 4f)
+            if (Mathf.Abs(tempVelocity.x) <= 4f && !isJumping)
             {
                 tempVelocity = new Vector2(0, tempVelocity.y);
             }
@@ -348,14 +365,21 @@ public class CharacterController : MonoBehaviour
     {
         isCollidingWithOneWayPlatforms = collision.collider.CompareTag("Platform") ? true : false;
 
-        if (collision.collider.CompareTag("Enemy") && !Physics2D.CapsuleCast(col.bounds.center, col.bounds.size - new Vector3(0.2f, 0f, 0f), col.direction, 0, Vector2.down, 0.05f, EnemyLayer)) {
-            if (!hitStun) {
+        if (collision.collider.CompareTag("Enemy") && !Physics2D.CapsuleCast(col.bounds.center, col.bounds.size , col.direction, 0, Vector2.down, 0.05f, EnemyLayer)) {
+            if (!hitStun && canBeHit) {
             tempVelocity.y = jumpForce* 0.7f;
             reverseDirection =  -1 * (int)Mathf.Sign(tempVelocity.x);
             tempVelocity.x = 0;
+            health -= collision.collider.GetComponent<EnemyTemplate>().damage;
+            canBeHit = false;
+            Invoke("ReactivateHit", IVFrames);
             }
             hitStun = true;
         }
+    }
+
+    private void ReactivateHit() {
+        canBeHit = true;
     }
 
     private void CheckHitStun() {

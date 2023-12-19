@@ -6,17 +6,17 @@ public class EnemyTemplate : MonoBehaviour
 {
     [Header("Basic Stats")]
     [SerializeField] protected int healthHit;
-    [SerializeField] protected int damage;
+    [SerializeField] public int damage;
     [SerializeField] protected float playerSpeedBoost;
     [SerializeField] protected float playerSpeedBoostDuration;
     protected CharacterController playerController;
-    protected BoxCollider2D boxCollider;
+    protected CapsuleCollider2D col;
     protected Rigidbody2D rb;
     // Start is called before the first frame update
     void Start()
     {
         playerController = GameObject.Find("Player").GetComponentInChildren<CharacterController>();
-        boxCollider = GetComponent<BoxCollider2D>();
+        col = GetComponent<CapsuleCollider2D>();
         rb = GetComponent<Rigidbody2D>();
         EnemyStart();
     }
@@ -34,7 +34,7 @@ public class EnemyTemplate : MonoBehaviour
             //Desativar a colisao
             //Continuar com o sprite renderer ate a animacao de morte terminar, quando terminar desativar o sprite renderer e continuar a dar buff de velocidade para o player
             GameObject root = gameObject.transform.parent.gameObject;
-            boxCollider.enabled = false;
+            col.enabled = false;
             rb.isKinematic = true;
             Destroy(root, playerSpeedBoostDuration);
         }
@@ -44,11 +44,11 @@ public class EnemyTemplate : MonoBehaviour
     protected virtual void EnemyStart() { }
 
     private bool CheckHead() {
-        return Physics2D.BoxCast(boxCollider.bounds.center, boxCollider.bounds.size, transform.rotation.eulerAngles.z, Vector2.up, 0.2f, playerController.PlayerLayer); ;
+        return Physics2D.CapsuleCast(col.bounds.center, col.bounds.size, col.direction, 0, Vector2.up, 0.5f, playerController.PlayerLayer); ;
     }
 
     protected bool IsOnGround() {
-        return Physics2D.BoxCast(boxCollider.bounds.center, boxCollider.bounds.size, transform.rotation.eulerAngles.z, Vector2.down, 0.02f, ~playerController.PlayerLayer & ~playerController.EnemyLayer); ;
+        return Physics2D.CapsuleCast(col.bounds.center, col.bounds.size, col.direction, 0, Vector2.down, 0.02f, ~playerController.PlayerLayer & ~playerController.EnemyLayer); ;
     }
 
     private void OnCollisionStay2D(Collision2D collision)

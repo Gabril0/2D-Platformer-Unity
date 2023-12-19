@@ -347,6 +347,10 @@ PrefabInstance:
       value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 3513431177942252281, guid: 5bfcdae675e4d404d8018465dd5345ff, type: 3}
+      propertyPath: IVFrames
+      value: 3
+      objectReference: {fileID: 0}
+    - target: {fileID: 3513431177942252281, guid: 5bfcdae675e4d404d8018465dd5345ff, type: 3}
       propertyPath: EnemyLayer.m_Bits
       value: 128
       objectReference: {fileID: 0}
